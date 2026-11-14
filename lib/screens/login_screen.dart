@@ -50,14 +50,34 @@ class _LoginScreenState extends State<LoginScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Text('Pengaturan Host Server', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Ubah alamat API jika menguji pada HP fisik (gunakan IP WiFi laptop, contoh http://192.168.1.5:8000/api/v1):',
+              'Pilih atau ketik alamat API backend sesuai perangkat:',
               style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                ActionChip(
+                  label: const Text('Emulator (10.0.2.2)', style: TextStyle(fontSize: 11)),
+                  onPressed: () => controller.text = 'http://10.0.2.2:8000/api/v1',
+                ),
+                ActionChip(
+                  label: const Text('Wi-Fi Laptop (192.168.18.13)', style: TextStyle(fontSize: 11)),
+                  onPressed: () => controller.text = 'http://192.168.18.13:8000/api/v1',
+                ),
+                ActionChip(
+                  label: const Text('Localhost (127.0.0.1)', style: TextStyle(fontSize: 11)),
+                  onPressed: () => controller.text = 'http://127.0.0.1:8000/api/v1',
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             TextField(
@@ -67,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
-              style: const TextStyle(fontSize: 13),
+              style: const TextStyle(fontSize: 12),
             ),
           ],
         ),
@@ -78,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
               await StorageService.setApiBaseUrl(controller.text.trim());
               if (mounted) Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Alamat server berhasil disimpan')),
+                SnackBar(content: Text('Alamat server disimpan: ${controller.text.trim()}')),
               );
             },
             child: const Text('Simpan'),

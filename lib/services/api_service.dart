@@ -15,22 +15,35 @@ class ApiService {
     String? photoUrl,
   }) async {
     final uri = Uri.parse('$baseUrl/auth/verify');
-    final response = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'display_name': displayName,
-        'photo_url': photoUrl,
-      }),
-    ).timeout(const Duration(seconds: 15));
+    try {
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'display_name': displayName,
+          'photo_url': photoUrl,
+        }),
+      ).timeout(const Duration(seconds: 8));
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return Student.fromJson(data['profile']);
-    } else {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? 'Gagal memverifikasi akun mahasiswa.');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return Student.fromJson(data['profile']);
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['detail'] ?? 'Gagal memverifikasi akun mahasiswa.');
+      }
+    } on TimeoutException {
+      throw Exception(
+        'Koneksi timeout ke $baseUrl. Jika menggunakan HP fisik/emulator eksternal, buka ikon pengaturan di pojok kanan atas dan gunakan IP laptop (contoh http://192.168.18.13:8000/api/v1).',
+      );
+    } catch (e) {
+      if (e.toString().contains('SocketException')) {
+        throw Exception(
+          'Tidak dapat terhubung ke server ($baseUrl). Pastikan backend FastAPI sedang berjalan.',
+        );
+      }
+      rethrow;
     }
   }
 
