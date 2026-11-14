@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
 import '../models/student.dart';
@@ -13,7 +14,16 @@ class StorageService {
 
   // API Base URL Setting
   static String getApiBaseUrl() {
-    return _prefs?.getString(AppConstants.keyApiUrl) ?? AppConstants.defaultBaseUrl;
+    final saved = _prefs?.getString(AppConstants.keyApiUrl);
+    if (saved != null && saved.isNotEmpty) {
+      // On Android devices, 127.0.0.1 refers to the phone itself, not the laptop!
+      // If 127.0.0.1 was accidentally set, reset to default Android host (10.0.2.2)
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android && saved.contains('127.0.0.1')) {
+        return AppConstants.defaultBaseUrl;
+      }
+      return saved;
+    }
+    return AppConstants.defaultBaseUrl;
   }
 
   static Future<void> setApiBaseUrl(String url) async {

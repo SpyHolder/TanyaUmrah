@@ -66,16 +66,12 @@ class _LoginScreenState extends State<LoginScreen> {
               runSpacing: 6,
               children: [
                 ActionChip(
-                  label: const Text('Emulator (10.0.2.2)', style: TextStyle(fontSize: 11)),
+                  label: const Text('Android Emulator (10.0.2.2)', style: TextStyle(fontSize: 11)),
                   onPressed: () => controller.text = 'http://10.0.2.2:8000/api/v1',
                 ),
                 ActionChip(
-                  label: const Text('Wi-Fi Laptop (192.168.18.13)', style: TextStyle(fontSize: 11)),
+                  label: const Text('HP Fisik / Wi-Fi (192.168.18.13)', style: TextStyle(fontSize: 11)),
                   onPressed: () => controller.text = 'http://192.168.18.13:8000/api/v1',
-                ),
-                ActionChip(
-                  label: const Text('Localhost (127.0.0.1)', style: TextStyle(fontSize: 11)),
-                  onPressed: () => controller.text = 'http://127.0.0.1:8000/api/v1',
                 ),
               ],
             ),
