@@ -15,7 +15,8 @@ class HistoryScreen extends StatefulWidget {
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProviderStateMixin {
+class _HistoryScreenState extends State<HistoryScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -34,19 +35,28 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     final chat = Provider.of<ChatProvider>(context);
     final bookmarks = StorageService.getBookmarks();
+    final questions = chat.messages
+        .where((m) => m.role == MessageRole.user)
+        .toList();
 
     return Scaffold(
       backgroundColor: AppConstants.surfaceLight,
       appBar: AppBar(
-        title: const Text('Riwayat & Tersimpan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Riwayat & Tersimpan',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppConstants.primaryBlue,
           labelColor: AppConstants.primaryBlue,
           unselectedLabelColor: Colors.grey,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
           tabs: [
-            Tab(text: 'Percakapan (${chat.messages.where((m) => m.role == MessageRole.user).length})'),
+            Tab(text: 'Pertanyaan (${questions.length})'),
             Tab(text: 'Tersimpan (${bookmarks.length})'),
           ],
         ),
@@ -55,16 +65,20 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
         controller: _tabController,
         children: [
           // Tab 1: Chat History
-          chat.messages.isEmpty
-              ? _buildEmptyState('Belum ada riwayat percakapan.', Icons.history_rounded)
+          questions.isEmpty
+              ? _buildEmptyState(
+                  'Belum ada riwayat pertanyaan.',
+                  Icons.history_rounded,
+                )
               : ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: chat.messages.length,
+                  itemCount: questions.length,
                   itemBuilder: (ctx, idx) {
-                    final msg = chat.messages[idx];
-                    if (msg.role != MessageRole.user) return const SizedBox.shrink();
+                    final msg = questions[idx];
 
-                    final timeStr = DateFormat('d MMM yyyy, HH:mm').format(msg.timestamp);
+                    final timeStr = DateFormat(
+                      'd MMM yyyy, HH:mm',
+                    ).format(msg.timestamp);
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
@@ -76,21 +90,45 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
                         leading: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppConstants.primaryBlue.withOpacity(0.1),
+                            color: AppConstants.primaryBlue.withValues(
+                              alpha: 0.1,
+                            ),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.chat_bubble_outline, size: 18, color: AppConstants.primaryBlue),
+                          child: const Icon(
+                            Icons.chat_bubble_outline,
+                            size: 18,
+                            color: AppConstants.primaryBlue,
+                          ),
                         ),
                         title: Text(
                           msg.content,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        subtitle: Text(timeStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                        subtitle: Text(
+                          timeStr,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 14,
+                          color: Colors.grey,
+                        ),
                         onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen()));
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ChatScreen(),
+                            ),
+                          );
                         },
                       ),
                     );
@@ -99,7 +137,10 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
 
           // Tab 2: Bookmarks
           bookmarks.isEmpty
-              ? _buildEmptyState('Belum ada jawaban yang disimpan.', Icons.bookmark_border_rounded)
+              ? _buildEmptyState(
+                  'Belum ada jawaban yang disimpan.',
+                  Icons.bookmark_border_rounded,
+                )
               : ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: bookmarks.length,
@@ -121,20 +162,44 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.bookmark_rounded, size: 16, color: AppConstants.primaryBlue),
+                                  const Icon(
+                                    Icons.bookmark_rounded,
+                                    size: 16,
+                                    color: AppConstants.primaryBlue,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    DateFormat('d MMMM yyyy').format(item.timestamp),
-                                    style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+                                    DateFormat(
+                                      'd MMMM yyyy',
+                                    ).format(item.timestamp),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ],
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 18,
+                                  color: Colors.red,
+                                ),
                                 tooltip: 'Hapus Simpanan',
                                 onPressed: () async {
-                                  await StorageService.toggleBookmark(item);
-                                  setState(() {});
+                                  try {
+                                    await chat.toggleBookmark(item);
+                                  } catch (_) {
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Gagal menghapus simpanan. Silakan coba lagi.',
+                                        ),
+                                      ),
+                                    );
+                                  }
                                 },
                               ),
                             ],
@@ -144,7 +209,11 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
                             data: item.content,
                             selectable: true,
                             styleSheet: MarkdownStyleSheet(
-                              p: const TextStyle(fontSize: 12.5, height: 1.4, color: Color(0xFF334155)),
+                              p: const TextStyle(
+                                fontSize: 12.5,
+                                height: 1.4,
+                                color: Color(0xFF334155),
+                              ),
                             ),
                           ),
                         ],

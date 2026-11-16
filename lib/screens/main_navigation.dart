@@ -43,7 +43,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -2),
             )
@@ -52,7 +52,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         child: NavigationBar(
           selectedIndex: _currentIndex,
           backgroundColor: Colors.white,
-          indicatorColor: AppConstants.primaryBlue.withOpacity(0.12),
+          indicatorColor: AppConstants.primaryBlue.withValues(alpha: 0.12),
           elevation: 0,
           onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
           destinations: const [

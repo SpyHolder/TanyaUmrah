@@ -36,9 +36,9 @@ class SourceCardWidget extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 6),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50.withOpacity(0.7),
+              color: Colors.blue.shade50.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.blue.shade200.withOpacity(0.5)),
+              border: Border.all(color: Colors.blue.shade200.withValues(alpha: 0.5)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,7 +63,7 @@ class SourceCardWidget extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                             decoration: BoxDecoration(
-                              color: AppConstants.primaryBlue.withOpacity(0.1),
+                              color: AppConstants.primaryBlue.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(

@@ -20,7 +20,7 @@ class AcademicStatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppConstants.primaryBlue.withOpacity(0.3),
+            color: AppConstants.primaryBlue.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           )
@@ -38,7 +38,7 @@ class AcademicStatCard extends StatelessWidget {
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -58,7 +58,7 @@ class AcademicStatCard extends StatelessWidget {
                       ),
                       Text(
                         '${student.nim} • ${student.prodi}',
-                        style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 11),
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 11),
                       ),
                     ],
                   ),
@@ -67,7 +67,7 @@ class AcademicStatCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
+                  color: Colors.white.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -84,7 +84,7 @@ class AcademicStatCard extends StatelessWidget {
             children: [
               Text(
                 'Progress SKS Menuju Kelulusan',
-                style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 11),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 11),
               ),
               Text(
                 '${student.totalSks} / 144 SKS',
@@ -97,7 +97,7 @@ class AcademicStatCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
               value: student.graduationProgress,
-              backgroundColor: Colors.white.withOpacity(0.2),
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
               valueColor: const AlwaysStoppedAnimation<Color>(AppConstants.accentGold),
               minHeight: 7,
             ),
@@ -108,9 +108,9 @@ class AcademicStatCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildMiniStat('IPK Kumulatif', student.ipk.toStringAsFixed(2)),
-              Container(height: 24, width: 1, color: Colors.white.withOpacity(0.2)),
+              Container(height: 24, width: 1, color: Colors.white.withValues(alpha: 0.2)),
               _buildMiniStat('SKS Selesai', '${student.totalSks} SKS'),
-              Container(height: 24, width: 1, color: Colors.white.withOpacity(0.2)),
+              Container(height: 24, width: 1, color: Colors.white.withValues(alpha: 0.2)),
               _buildMiniStat('Status', student.status.toUpperCase()),
             ],
           ),
@@ -124,7 +124,7 @@ class AcademicStatCard extends StatelessWidget {
       children: [
         Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 1),
-        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 10)),
+        Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 10)),
       ],
     );
   }

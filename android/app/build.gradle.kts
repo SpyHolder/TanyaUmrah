@@ -5,6 +5,11 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Keep an unconfigured checkout buildable; Firebase login remains disabled.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.example.tanya_umrah"
     compileSdk = flutter.compileSdkVersion

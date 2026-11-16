@@ -1,107 +1,112 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
-import '../models/student.dart';
 import '../models/message.dart';
+import '../models/student.dart';
 
 class StorageService {
   static SharedPreferences? _prefs;
+  static String? _accountId;
+  static String? get accountId => _accountId;
 
   static Future<void> init() async {
-    _prefs ??= await SharedPreferences.getInstance();
-  }
-
-  // API Base URL Setting
-  static String getApiBaseUrl() {
-    final saved = _prefs?.getString(AppConstants.keyApiUrl);
-    if (saved != null && saved.isNotEmpty) {
-      // On Android devices, 127.0.0.1 refers to the phone itself, not the laptop!
-      // If 127.0.0.1 was accidentally set, reset to default Android host (10.0.2.2)
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android && saved.contains('127.0.0.1')) {
-        return AppConstants.defaultBaseUrl;
-      }
-      return saved;
+    _prefs = await SharedPreferences.getInstance();
+    _accountId = null;
+    // Legacy data has no verified owner; never attach it to a Firebase account.
+    for (final key in [
+      AppConstants.keyStudentProfile,
+      AppConstants.keyChatHistory,
+      AppConstants.keyBookmarks,
+      'tanya_umrah_api_url',
+    ]) {
+      await _prefs!.remove(key);
     }
-    return AppConstants.defaultBaseUrl;
   }
 
-  static Future<void> setApiBaseUrl(String url) async {
-    await _prefs?.setString(AppConstants.keyApiUrl, url.trim());
-  }
+  static void useAccount(String? uid) => _accountId = uid;
+  static String? _key(String name) =>
+      _accountId == null ? null : '$_accountId:$name';
 
-  // Student Profile
   static Student? getStudent() {
-    final str = _prefs?.getString(AppConstants.keyStudentProfile);
-    if (str == null) return null;
+    final key = _key(AppConstants.keyStudentProfile);
+    final text = key == null ? null : _prefs?.getString(key);
+    if (text == null) return null;
     try {
-      return Student.fromJson(jsonDecode(str));
+      return Student.fromJson(jsonDecode(text));
     } catch (_) {
       return null;
     }
   }
 
   static Future<void> saveStudent(Student student) async {
-    await _prefs?.setString(AppConstants.keyStudentProfile, jsonEncode(student.toJson()));
+    final key = _key(AppConstants.keyStudentProfile);
+    if (key != null) await _prefs!.setString(key, jsonEncode(student.toJson()));
   }
 
-  static Future<void> clearStudent() async {
-    await _prefs?.remove(AppConstants.keyStudentProfile);
-  }
-
-  // Chat History
-  static List<ChatMessage> getChatHistory() {
-    final str = _prefs?.getString(AppConstants.keyChatHistory);
-    if (str == null) return [];
+  static List<ChatMessage> _messages(String name) {
+    final key = _key(name);
+    final text = key == null ? null : _prefs?.getString(key);
+    if (text == null) return [];
     try {
-      final List list = jsonDecode(str);
-      return list.map((item) => ChatMessage.fromJson(item)).toList();
+      return (jsonDecode(text) as List)
+          .map((item) => ChatMessage.fromJson(item))
+          .toList();
     } catch (_) {
       return [];
     }
+  }
+
+  static List<ChatMessage> getChatHistory() {
+    final bookmarks = getBookmarks().map((m) => m.id).toSet();
+    return _messages(AppConstants.keyChatHistory)..forEach(
+      (message) => message.isBookmarked = bookmarks.contains(message.id),
+    );
   }
 
   static Future<void> saveChatHistory(List<ChatMessage> messages) async {
-    final list = messages.map((m) => m.toJson()).toList();
-    await _prefs?.setString(AppConstants.keyChatHistory, jsonEncode(list));
+    final key = _key(AppConstants.keyChatHistory);
+    if (key == null) return;
+    await _prefs!.setString(
+      key,
+      jsonEncode(messages.map((m) => m.toJson()).toList()),
+    );
+  }
+
+  static String? getConversationId() {
+    final key = _key('conversation_id');
+    return key == null ? null : _prefs?.getString(key);
+  }
+
+  static Future<void> saveConversationId(String? id) async {
+    final key = _key('conversation_id');
+    if (key == null) return;
+    if (id == null) {
+      await _prefs!.remove(key);
+    } else {
+      await _prefs!.setString(key, id);
+    }
   }
 
   static Future<void> clearChatHistory() async {
-    await _prefs?.remove(AppConstants.keyChatHistory);
+    final key = _key(AppConstants.keyChatHistory);
+    if (key != null) await _prefs!.remove(key);
+    await saveConversationId(null);
   }
 
-  // Bookmarks
-  static List<ChatMessage> getBookmarks() {
-    final str = _prefs?.getString(AppConstants.keyBookmarks);
-    if (str == null) return [];
-    try {
-      final List list = jsonDecode(str);
-      return list.map((item) => ChatMessage.fromJson(item)).toList();
-    } catch (_) {
-      return [];
-    }
-  }
+  static List<ChatMessage> getBookmarks() =>
+      _messages(AppConstants.keyBookmarks);
 
-  static Future<void> toggleBookmark(ChatMessage msg) async {
+  static Future<void> toggleBookmark(ChatMessage message) async {
+    final key = _key(AppConstants.keyBookmarks);
+    if (key == null) return;
     final bookmarks = getBookmarks();
-    final index = bookmarks.indexWhere((m) => m.id == msg.id);
-    if (index >= 0) {
-      bookmarks.removeAt(index);
-      msg.isBookmarked = false;
-    } else {
-      msg.isBookmarked = true;
-      bookmarks.insert(0, msg);
-    }
-    final list = bookmarks.map((m) => m.toJson()).toList();
-    await _prefs?.setString(AppConstants.keyBookmarks, jsonEncode(list));
-  }
-
-  // Dark Mode
-  static bool isDarkMode() {
-    return _prefs?.getBool(AppConstants.keyDarkMode) ?? false;
-  }
-
-  static Future<void> setDarkMode(bool value) async {
-    await _prefs?.setBool(AppConstants.keyDarkMode, value);
+    final exists = bookmarks.any((m) => m.id == message.id);
+    bookmarks.removeWhere((m) => m.id == message.id);
+    message.isBookmarked = !exists;
+    if (!exists) bookmarks.insert(0, message);
+    await _prefs!.setString(
+      key,
+      jsonEncode(bookmarks.map((m) => m.toJson()).toList()),
+    );
   }
 }

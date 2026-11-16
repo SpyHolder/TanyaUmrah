@@ -18,7 +18,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (mounted && _scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
@@ -35,6 +35,13 @@ class _ChatScreenState extends State<ChatScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final chat = Provider.of<ChatProvider>(context, listen: false);
 
+    if (chat.isStreaming) return;
+    if (text.length > 4000) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pertanyaan maksimal 4.000 karakter.')),
+      );
+      return;
+    }
     _textController.clear();
     chat.sendMessage(query: text, student: auth.currentStudent);
     _scrollToBottom();
@@ -45,34 +52,37 @@ class _ChatScreenState extends State<ChatScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Input Suara', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Input Suara',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppConstants.primaryBlue.withOpacity(0.1),
+                color: AppConstants.primaryBlue.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.mic, size: 48, color: AppConstants.primaryBlue),
+              child: const Icon(
+                Icons.mic,
+                size: 48,
+                color: AppConstants.primaryBlue,
+              ),
             ),
             const SizedBox(height: 16),
             const Text(
-              'Silakan ucapkan pertanyaan akademik Anda...',
+              'Input suara belum tersedia. Silakan ketik pertanyaan Anda pada kolom chat.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _textController.text = 'Apakah saya bisa mengambil mata kuliah di semester atas?';
-            },
-            child: const Text('Simulasi Selesai'),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
           ),
         ],
       ),
@@ -80,12 +90,21 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   @override
+  void dispose() {
+    _textController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final chat = Provider.of<ChatProvider>(context);
     final auth = Provider.of<AuthProvider>(context);
 
-    // Auto scroll when message streaming updates
-    _scrollToBottom();
+    if (!_scrollController.hasClients ||
+        _scrollController.position.extentAfter < 120) {
+      _scrollToBottom();
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -93,12 +112,25 @@ class _ChatScreenState extends State<ChatScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('tanyaUMRAH Asisten AI', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            const Text(
+              'tanyaUMRAH Asisten AI',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            ),
             Row(
               children: [
-                Container(width: 7, height: 7, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF10B981),
+                    shape: BoxShape.circle,
+                  ),
+                ),
                 const SizedBox(width: 5),
-                const Text('RAG Knowledge Base Aktif', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                const Text(
+                  'Asisten informasi berbasis dokumen',
+                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                ),
               ],
             ),
           ],
@@ -110,7 +142,10 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () {
               chat.clearChat();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Percakapan baru dimulai'), duration: Duration(seconds: 1)),
+                const SnackBar(
+                  content: Text('Percakapan baru dimulai'),
+                  duration: Duration(seconds: 1),
+                ),
               );
             },
           ),
@@ -129,20 +164,35 @@ class _ChatScreenState extends State<ChatScreen> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(color: AppConstants.primaryBlue.withOpacity(0.08), shape: BoxShape.circle),
-                            child: const Icon(Icons.auto_awesome, size: 36, color: AppConstants.primaryBlue),
+                            decoration: BoxDecoration(
+                              color: AppConstants.primaryBlue.withValues(alpha: 0.08),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.auto_awesome,
+                              size: 36,
+                              color: AppConstants.primaryBlue,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           const Text(
                             'Ada yang bisa saya bantu seputar aturan kampus?',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E293B),
+                            ),
                           ),
                           const SizedBox(height: 6),
                           const Text(
                             'Tanyakan informasi KRS, cuti kuliah, syarat magang, etika akademik, hingga SOP layanan BAPKK.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 11, color: Colors.grey, height: 1.4),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                              height: 1.4,
+                            ),
                           ),
                         ],
                       ),
@@ -150,15 +200,22 @@ class _ChatScreenState extends State<ChatScreen> {
                   )
                 : ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     itemCount: chat.messages.length,
                     itemBuilder: (context, index) {
                       final msg = chat.messages[index];
                       return ChatBubble(
+                        key: ValueKey(msg.id),
                         message: msg,
                         onBookmarkTap: () => chat.toggleBookmark(msg),
                         onSuggestionTap: (suggestion) {
-                          chat.sendMessage(query: suggestion, student: auth.currentStudent);
+                          chat.sendMessage(
+                            query: suggestion,
+                            student: auth.currentStudent,
+                          );
                         },
                       );
                     },
@@ -176,7 +233,10 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.mic_none_rounded, color: AppConstants.primaryBlue),
+                    icon: const Icon(
+                      Icons.mic_none_rounded,
+                      color: AppConstants.primaryBlue,
+                    ),
                     tooltip: 'Input Suara',
                     onPressed: _showVoiceInputDialog,
                   ),
@@ -191,7 +251,10 @@ class _ChatScreenState extends State<ChatScreen> {
                         controller: _textController,
                         decoration: const InputDecoration(
                           hintText: 'Ketik pertanyaan akademik...',
-                          hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
+                          hintStyle: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey,
+                          ),
                           border: InputBorder.none,
                           isDense: true,
                         ),
@@ -213,9 +276,16 @@ class _ChatScreenState extends State<ChatScreen> {
                           ? const SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
-                          : const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20),
+                          : const Icon(
+                              Icons.arrow_upward_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                       onPressed: chat.isStreaming ? null : _send,
                     ),
                   ),

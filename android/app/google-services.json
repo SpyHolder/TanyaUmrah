@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "375977508318",
+    "project_id": "tanyaumrah-db96d",
+    "storage_bucket": "tanyaumrah-db96d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:375977508318:android:c3f47adae7a00c12af714f",
+        "android_client_info": {
+          "package_name": "com.example.tanya_umrah"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "375977508318-ap0trma0lck255jhrf8i6lb1igjeo9pi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.tanya_umrah",
+            "certificate_hash": "cc8101823d94260291a051abc3894e72107c727a"
+          }
+        },
+        {
+          "client_id": "375977508318-tilnotulovuh3u0kg9ak2oopn2l07tsr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDluDVC3dUJbknzL7zr5IVWrPcGGaVvejU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "375977508318-tilnotulovuh3u0kg9ak2oopn2l07tsr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

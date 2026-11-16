@@ -1,180 +1,198 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'storage_service.dart';
+import '../core/app_config.dart';
 import '../models/student.dart';
 import '../models/calendar_event.dart';
+import 'sse_decoder.dart';
+
+class ApiException implements Exception {
+  final String message;
+  final int? statusCode;
+  const ApiException(this.message, [this.statusCode]);
+  @override
+  String toString() => message;
+}
 
 class ApiService {
-  static String get baseUrl => StorageService.getApiBaseUrl();
+  static String get baseUrl => AppConfig.apiBaseUrl;
+  static Future<String?> Function()? tokenProvider;
+  static Future<void> Function()? onUnauthorized;
+  static http.Client Function() clientFactory = http.Client.new;
 
-  // Verify Student Login
-  static Future<Student> verifyStudent({
-    required String email,
-    String? displayName,
-    String? photoUrl,
-  }) async {
-    final uri = Uri.parse('$baseUrl/auth/verify');
-    try {
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'display_name': displayName,
-          'photo_url': photoUrl,
-        }),
-      ).timeout(const Duration(seconds: 8));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return Student.fromJson(data['profile']);
-      } else {
-        final error = jsonDecode(response.body);
-        throw Exception(error['detail'] ?? 'Gagal memverifikasi akun mahasiswa.');
-      }
-    } on TimeoutException {
-      throw Exception(
-        'Koneksi timeout ke $baseUrl. Jika menggunakan HP fisik/emulator eksternal, buka ikon pengaturan di pojok kanan atas dan gunakan IP laptop (contoh http://192.168.18.13:8000/api/v1).',
+  static Future<Map<String, String>> _headers({String? token}) async {
+    token ??= await tokenProvider?.call();
+    if (token == null || token.isEmpty) {
+      throw const ApiException(
+        'Sesi tidak tersedia. Silakan masuk kembali.',
+        401,
       );
-    } catch (e) {
-      if (e.toString().contains('SocketException')) {
-        throw Exception(
-          'Tidak dapat terhubung ke server ($baseUrl). Pastikan backend FastAPI sedang berjalan.',
-        );
-      }
-      rethrow;
     }
-  }
-
-  // Update Student Profile
-  static Future<Student> updateProfile(String nim, Map<String, dynamic> payload) async {
-    final uri = Uri.parse('$baseUrl/user/profile/$nim');
-    final response = await http.put(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(payload),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return Student.fromJson(data['profile']);
-    } else {
-      throw Exception('Gagal memperbarui profil.');
-    }
-  }
-
-  // Send Chat Query with SSE Streaming
-  static Stream<Map<String, dynamic>> streamChatQuery({
-    required String query,
-    String? nim,
-    String? conversationId,
-  }) async* {
-    final uri = Uri.parse('$baseUrl/chat');
-    final request = http.Request('POST', uri);
-    request.headers.addAll({
+    return {
       'Content-Type': 'application/json',
-      'Accept': 'text/event-stream',
-    });
-    request.body = jsonEncode({
-      'query': query,
-      'nim': nim,
-      'conversation_id': conversationId,
-    });
+      'Authorization': 'Bearer $token',
+    };
+  }
 
-    final client = http.Client();
+  static Future<void> _check(int status, String body) async {
+    if (status >= 200 && status < 300) return;
+    if (status == 401) await onUnauthorized?.call();
+    String message = 'Permintaan gagal (HTTP $status). Silakan coba lagi.';
     try {
-      final response = await client.send(request);
-
-      if (response.statusCode != 200) {
-        yield {
-          'type': 'token',
-          'content': 'Maaf, server backend sedang tidak dapat dihubungi (${response.statusCode}).',
-        };
-        yield {'type': 'done'};
-        return;
+      final detail = (jsonDecode(body) as Map<String, dynamic>)['detail'];
+      if (detail is String) message = detail;
+      if (detail is List) {
+        message = 'Data tidak valid. Periksa kembali isian Anda.';
       }
+    } catch (_) {
+      /* Non-JSON reverse proxy response. */
+    }
+    throw ApiException(message, status);
+  }
 
-      String buffer = '';
-      await for (final chunk in response.stream.transform(utf8.decoder)) {
-        buffer += chunk;
-        while (buffer.contains('\n\n')) {
-          final eventEnd = buffer.indexOf('\n\n');
-          final eventString = buffer.substring(0, eventEnd).trim();
-          buffer = buffer.substring(eventEnd + 2);
-
-          for (final line in eventString.split('\n')) {
-            if (line.startsWith('data:')) {
-              final jsonStr = line.replaceFirst('data:', '').trim();
-              if (jsonStr.isNotEmpty) {
-                try {
-                  final data = jsonDecode(jsonStr);
-                  yield data;
-                } catch (_) {}
-              }
-            }
-          }
-        }
-      }
-    } catch (e) {
-      yield {
-        'type': 'token',
-        'content': '\n\n⚠️ Kendala koneksi ke server ($baseUrl): $e\nPastikan backend FastAPI sedang berjalan.',
-      };
-      yield {'type': 'done'};
+  static Future<Map<String, dynamic>> _request(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+    String? token,
+  }) async {
+    final client = clientFactory();
+    try {
+      final request = http.Request(method, Uri.parse('$baseUrl$path'));
+      request.headers.addAll(await _headers(token: token));
+      if (body != null) request.body = jsonEncode(body);
+      final response = await (() async {
+        return http.Response.fromStream(await client.send(request));
+      })().timeout(AppConfig.requestTimeout);
+      await _check(response.statusCode, response.body);
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } on TimeoutException {
+      throw ApiException(
+        'Koneksi ke $baseUrl melewati batas waktu. Periksa server lokal dan lib/core/app_config.dart.',
+      );
+    } on http.ClientException {
+      throw ApiException(
+        'Tidak dapat terhubung ke $baseUrl. Periksa server, jaringan, dan lib/core/app_config.dart.',
+      );
+    } on FormatException {
+      throw const ApiException('Respons server tidak valid.');
     } finally {
       client.close();
     }
   }
 
-  // Get Academic Calendar Events
-  static Future<List<CalendarEvent>> getCalendarEvents({int? month, int? year}) async {
-    String url = '$baseUrl/calendar/events';
-    final params = <String>[];
-    if (month != null) params.add('month=$month');
-    if (year != null) params.add('year=$year');
-    if (params.isNotEmpty) url += '?${params.join('&')}';
-
-    final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final List list = data['events'] ?? [];
-      return list.map((item) => CalendarEvent.fromJson(item)).toList();
-    }
-    return [];
+  static Future<Student> verifyStudent({required String idToken}) async {
+    final data = await _request(
+      'POST',
+      '/auth/verify',
+      token: idToken,
+      body: {'id_token': idToken},
+    );
+    return Student.fromJson(data['profile']);
   }
 
-  // Get Document Knowledge Base List
+  static Future<Student> updateProfile(
+    String nim,
+    Map<String, dynamic> payload,
+  ) async {
+    final data = await _request('PUT', '/user/profile/$nim', body: payload);
+    return Student.fromJson(data['profile']);
+  }
+
+  static Stream<Map<String, dynamic>> streamChatQuery({
+    required String query,
+    String? conversationId,
+    List<Map<String, String>> history = const [],
+    required http.Client client,
+  }) async* {
+    try {
+      final request = http.Request('POST', Uri.parse('$baseUrl/chat'));
+      request.headers.addAll(await _headers());
+      request.headers['Accept'] = 'text/event-stream';
+      request.body = jsonEncode({
+        'query': query,
+        'conversation_id': conversationId,
+        'history': history,
+      });
+      final response = await client
+          .send(request)
+          .timeout(AppConfig.requestTimeout);
+      if (response.statusCode != 200) {
+        final body = await response.stream.bytesToString().timeout(
+          AppConfig.requestTimeout,
+        );
+        await _check(response.statusCode, body);
+      }
+      var completed = false;
+      await for (final event in SseDecoder.decode(
+        response.stream.timeout(AppConfig.streamIdleTimeout),
+      )) {
+        if (event['type'] == 'error') {
+          throw ApiException(
+            event['content'] as String? ?? 'Layanan jawaban sedang bermasalah.',
+          );
+        }
+        yield event;
+        if (event['type'] == 'done') {
+          completed = true;
+          break;
+        }
+      }
+      if (!completed) {
+        throw const ApiException(
+          'Koneksi terputus sebelum jawaban selesai. Silakan coba lagi.',
+        );
+      }
+    } on TimeoutException {
+      throw const ApiException(
+        'Server terlalu lama merespons. Silakan coba lagi.',
+      );
+    } on http.ClientException {
+      throw const ApiException(
+        'Koneksi chat terputus. Periksa jaringan dan backend lokal.',
+      );
+    } on FormatException {
+      throw const ApiException('Format streaming dari server tidak valid.');
+    } finally {
+      client.close();
+    }
+  }
+
+  static Future<List<CalendarEvent>> getCalendarEvents({
+    int? month,
+    int? year,
+  }) async {
+    final params = <String, String>{
+      if (month != null) 'month': '$month',
+      if (year != null) 'year': '$year',
+    };
+    final query = params.isEmpty
+        ? ''
+        : '?${Uri(queryParameters: params).query}';
+    final data = await _request('GET', '/calendar/events$query');
+    return (data['events'] as List)
+        .map((item) => CalendarEvent.fromJson(item))
+        .toList();
+  }
+
   static Future<List<Map<String, dynamic>>> getDocuments() async {
-    final response = await http.get(Uri.parse('$baseUrl/documents')).timeout(const Duration(seconds: 10));
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return List<Map<String, dynamic>>.from(data['documents'] ?? []);
-    }
-    return [];
+    final data = await _request('GET', '/documents');
+    return List<Map<String, dynamic>>.from(data['documents']);
   }
 
-  // Submit Feedback
-  static Future<bool> sendFeedback({
+  static Future<void> sendFeedback({
     required String messageId,
     required String rating,
-    String? nim,
-    String? comment,
+    String? conversationId,
   }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/chat/feedback'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'message_id': messageId,
-          'rating': rating,
-          'nim': nim,
-          'comment': comment,
-        }),
-      );
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
+    await _request(
+      'POST',
+      '/chat/feedback',
+      body: {
+        'message_id': messageId,
+        'rating': rating,
+        'conversation_id': conversationId,
+      },
+    );
   }
 }
