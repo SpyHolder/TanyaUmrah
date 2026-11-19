@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../core/app_config.dart';
 import '../models/student.dart';
@@ -178,6 +179,70 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getDocuments() async {
     final data = await _request('GET', '/documents');
     return List<Map<String, dynamic>>.from(data['documents']);
+  }
+
+  static Future<int?> resolveDocumentId({
+    int? documentId,
+    required String documentName,
+  }) async {
+    if (documentId != null) return documentId;
+    final docs = await getDocuments();
+    final target = documentName.trim().toLowerCase();
+    for (final doc in docs) {
+      final nama = (doc['nama'] ?? '').toString().trim().toLowerCase();
+      final filename = (doc['filename'] ?? '').toString().trim().toLowerCase();
+      if (nama == target || filename == target) {
+        return (doc['id'] as num?)?.toInt();
+      }
+    }
+    for (final doc in docs) {
+      final nama = (doc['nama'] ?? '').toString().trim().toLowerCase();
+      final filename = (doc['filename'] ?? '').toString().trim().toLowerCase();
+      if (nama.contains(target) ||
+          target.contains(nama) ||
+          filename.contains(target)) {
+        return (doc['id'] as num?)?.toInt();
+      }
+    }
+    return docs.isNotEmpty ? (docs.first['id'] as num?)?.toInt() : null;
+  }
+
+  static Future<Map<String, dynamic>> getDocumentPage({
+    required int documentId,
+    required int page,
+  }) async {
+    return _request('GET', '/documents/$documentId/pages/$page');
+  }
+
+  static Future<Uint8List> getDocumentPageImageBytes({
+    required int documentId,
+    required int page,
+  }) async {
+    final client = clientFactory();
+    try {
+      final request = http.Request(
+        'GET',
+        Uri.parse('$baseUrl/documents/$documentId/pages/$page/image'),
+      );
+      request.headers.addAll(await _headers());
+      final response = await (() async {
+        return http.Response.fromStream(await client.send(request));
+      })().timeout(AppConfig.requestTimeout);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        await _check(response.statusCode, response.body);
+      }
+      return response.bodyBytes;
+    } on TimeoutException {
+      throw ApiException(
+        'Memuat halaman dokumen melewati batas waktu. Periksa koneksi server.',
+      );
+    } on http.ClientException {
+      throw ApiException(
+        'Gagal memuat visual dokumen dari $baseUrl.',
+      );
+    } finally {
+      client.close();
+    }
   }
 
   static Future<void> sendFeedback({

@@ -66,7 +66,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     final selectedEvents = _selectedDay != null
         ? _getEventsForDay(_selectedDay!)
-        : [];
+        : <CalendarEvent>[];
     final currentYear = DateTime.now().year;
     final firstYear = currentYear < 2020 ? currentYear : 2020;
     final lastYear = currentYear + 5 > 2035 ? currentYear + 5 : 2035;
@@ -89,30 +89,36 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
           ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(_error!, textAlign: TextAlign.center),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: _fetchEvents,
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Coba lagi'),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: _fetchEvents,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Coba lagi'),
+                    ),
+                  ],
+                ),
               ),
             )
-          : Column(
+          : ListView(
+              padding: const EdgeInsets.only(bottom: 24),
               children: [
                 // Calendar Card
                 Container(
-                  margin: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                  padding: const EdgeInsets.only(bottom: 8),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppConstants.borderLight),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
+                        color: Colors.black.withValues(alpha: 0.03),
                         blurRadius: 10,
                         offset: const Offset(0, 3),
                       ),
@@ -123,29 +129,37 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     lastDay: DateTime.utc(lastYear, 12, 31),
                     focusedDay: _focusedDay,
                     calendarFormat: _calendarFormat,
+                    rowHeight: 42,
+                    daysOfWeekHeight: 22,
+                    availableGestures: AvailableGestures.horizontalSwipe,
                     selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                     eventLoader: _getEventsForDay,
                     startingDayOfWeek: StartingDayOfWeek.monday,
-                    headerStyle: HeaderStyle(
+                    headerStyle: const HeaderStyle(
                       formatButtonVisible: false,
                       titleCentered: true,
-                      titleTextStyle: const TextStyle(
+                      titleTextStyle: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
+                        color: AppConstants.textDark,
                       ),
-                      leftChevronIcon: const Icon(
-                        Icons.chevron_left,
+                      leftChevronIcon: Icon(
+                        Icons.chevron_left_rounded,
                         color: AppConstants.primaryBlue,
                       ),
-                      rightChevronIcon: const Icon(
-                        Icons.chevron_right,
+                      rightChevronIcon: Icon(
+                        Icons.chevron_right_rounded,
                         color: AppConstants.primaryBlue,
                       ),
                     ),
                     calendarStyle: CalendarStyle(
                       todayDecoration: BoxDecoration(
-                        color: AppConstants.primaryBlue.withValues(alpha: 0.2),
+                        color: AppConstants.softBlue,
                         shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppConstants.primaryBlue,
+                          width: 1.5,
+                        ),
                       ),
                       todayTextStyle: const TextStyle(
                         color: AppConstants.primaryBlue,
@@ -154,6 +168,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       selectedDecoration: const BoxDecoration(
                         color: AppConstants.primaryBlue,
                         shape: BoxShape.circle,
+                      ),
+                      selectedTextStyle: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
                       markerDecoration: const BoxDecoration(
                         color: AppConstants.accentGold,
@@ -172,7 +190,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                 ),
 
-                // Selected Day Events List
+                // Selected Day Events Header
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -186,142 +204,176 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         color: Colors.grey.shade700,
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        _selectedDay != null
-                            ? 'Jadwal: ${DateFormat('d MMMM yyyy').format(_selectedDay!)}'
-                            : 'Pilih Tanggal',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: Color(0xFF1E293B),
+                      Expanded(
+                        child: Text(
+                          _selectedDay != null
+                              ? 'Jadwal: ${DateFormat('d MMMM yyyy').format(_selectedDay!)}'
+                              : 'Pilih Tanggal',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Color(0xFF1E293B),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                Expanded(
-                  child: selectedEvents.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.event_busy_outlined,
-                                size: 36,
-                                color: Colors.grey.shade400,
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Tidak ada jadwal kegiatan pada tanggal ini.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
+                // Events or Empty State
+                if (selectedEvents.isEmpty)
+                  Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 28,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppConstants.borderLight),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.event_busy_outlined,
+                          size: 34,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Tidak ada jadwal kegiatan pada tanggal ini.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
+                    child: Column(
+                      children: selectedEvents.map((ev) {
+                        Color catColor = AppConstants.primaryBlue;
+                        final catLower = ev.category.toLowerCase();
+                        if (catLower.contains('ujian') ||
+                            catLower.contains('evaluasi')) {
+                          catColor = AppConstants.errorRed;
+                        } else if (catLower.contains('registrasi') ||
+                            catLower.contains('krs') ||
+                            catLower.contains('lirs')) {
+                          catColor = AppConstants.successGreen;
+                        } else if (catLower.contains('libur') ||
+                            catLower.contains('wisuda')) {
+                          catColor = AppConstants.accentGold;
+                        }
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppConstants.borderLight),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.02),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 6,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: catColor,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      ev.title,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: AppConstants.textDark,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      ev.description ??
+                                          'Jadwal resmi kalender akademik UMRAH',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppConstants.textMuted,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2.5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: catColor.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        ev.category.toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: catColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.notifications_active_outlined,
+                                  size: 19,
+                                  color: AppConstants.textMuted,
+                                ),
+                                tooltip: 'Pengingat belum tersedia',
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Fitur pengingat kalender belum tersedia.',
+                                      ),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
-                          itemCount: selectedEvents.length,
-                          itemBuilder: (ctx, idx) {
-                            final ev = selectedEvents[idx];
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    width: 4,
-                                    height: 38,
-                                    decoration: BoxDecoration(
-                                      color: AppConstants.primaryBlue,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          ev.title,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          ev.description ??
-                                              'Jadwal resmi kalender akademik UMRAH',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppConstants.primaryBlue
-                                                .withValues(alpha: 0.08),
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            ev.category.toUpperCase(),
-                                            style: const TextStyle(
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppConstants.primaryBlue,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.notifications_active_outlined,
-                                      size: 20,
-                                      color: AppConstants.accentGold,
-                                    ),
-                                    tooltip: 'Pengingat belum tersedia',
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Fitur pengingat belum tersedia.',
-                                          ),
-                                          duration: Duration(seconds: 2),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
               ],
             ),
     );

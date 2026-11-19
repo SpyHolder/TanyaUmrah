@@ -63,10 +63,24 @@ class _ChatBubbleState extends State<ChatBubble> {
       if (widget.message.hasError) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            rating == 'helpful'
-                ? 'Terima kasih atas feedback positif Anda! 👍'
-                : 'Terima kasih, kami akan meningkatkan jawaban ini! 📝',
+          content: Row(
+            children: [
+              Icon(
+                rating == 'helpful'
+                    ? Icons.thumb_up_alt_rounded
+                    : Icons.thumb_down_alt_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  rating == 'helpful'
+                      ? 'Terima kasih atas penilaian positif Anda!'
+                      : 'Terima kasih, masukan Anda sangat berharga.',
+                ),
+              ),
+            ],
           ),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
@@ -101,9 +115,20 @@ class _ChatBubbleState extends State<ChatBubble> {
             Container(
               width: 32,
               height: 32,
-              decoration: const BoxDecoration(
-                color: AppConstants.primaryBlue,
-                shape: BoxShape.circle,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppConstants.primaryDark, AppConstants.primaryBlue],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(9),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppConstants.primaryBlue.withValues(alpha: 0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
               ),
               child: const Center(
                 child: Text(
@@ -126,7 +151,7 @@ class _ChatBubbleState extends State<ChatBubble> {
               children: [
                 Container(
                   constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.78,
+                    maxWidth: MediaQuery.of(context).size.width * 0.80,
                   ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
@@ -142,14 +167,16 @@ class _ChatBubbleState extends State<ChatBubble> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
+                        color: isUser
+                            ? AppConstants.primaryBlue.withValues(alpha: 0.15)
+                            : Colors.black.withValues(alpha: 0.03),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
                     border: isUser
                         ? null
-                        : Border.all(color: Colors.grey.shade200),
+                        : Border.all(color: AppConstants.borderLight),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,8 +186,42 @@ class _ChatBubbleState extends State<ChatBubble> {
                           widget.message.content,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 14,
-                            height: 1.4,
+                            fontSize: 13.5,
+                            height: 1.45,
+                          ),
+                        )
+                      else if (widget.message.hasError)
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppConstants.softRed,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: AppConstants.errorRed.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: AppConstants.errorRed,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  widget.message.content.isNotEmpty
+                                      ? widget.message.content
+                                      : 'Gagal memuat jawaban. Silakan periksa jaringan dan coba lagi.',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppConstants.errorRed,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         )
                       else ...[
@@ -169,7 +230,7 @@ class _ChatBubbleState extends State<ChatBubble> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              SizedBox(
+                              const SizedBox(
                                 width: 14,
                                 height: 14,
                                 child: CircularProgressIndicator(
@@ -181,7 +242,7 @@ class _ChatBubbleState extends State<ChatBubble> {
                               const Text(
                                 'Sedang menyusun jawaban...',
                                 style: TextStyle(
-                                  color: Colors.grey,
+                                  color: AppConstants.textMuted,
                                   fontSize: 12,
                                 ),
                               ),
@@ -197,8 +258,8 @@ class _ChatBubbleState extends State<ChatBubble> {
                                 ).copyWith(
                                   p: const TextStyle(
                                     fontSize: 13.5,
-                                    height: 1.45,
-                                    color: Color(0xFF1E293B),
+                                    height: 1.48,
+                                    color: AppConstants.textDark,
                                   ),
                                   h3: const TextStyle(
                                     fontSize: 14.5,
@@ -207,7 +268,7 @@ class _ChatBubbleState extends State<ChatBubble> {
                                   ),
                                   strong: const TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0F172A),
+                                    color: AppConstants.textDark,
                                   ),
                                 ),
                           ),
@@ -243,13 +304,14 @@ class _ChatBubbleState extends State<ChatBubble> {
                       children: [
                         Text(
                           timeStr,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 10,
-                            color: Colors.grey.shade400,
+                            color: AppConstants.textMuted,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         InkWell(
+                          borderRadius: BorderRadius.circular(4),
                           onTap: () {
                             Clipboard.setData(
                               ClipboardData(text: widget.message.content),
@@ -261,49 +323,64 @@ class _ChatBubbleState extends State<ChatBubble> {
                               ),
                             );
                           },
-                          child: Icon(
-                            Icons.copy_rounded,
-                            size: 14,
-                            color: Colors.grey.shade500,
+                          child: const Padding(
+                            padding: EdgeInsets.all(2),
+                            child: Icon(
+                              Icons.copy_rounded,
+                              size: 15,
+                              color: AppConstants.textMuted,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         InkWell(
+                          borderRadius: BorderRadius.circular(4),
                           onTap: widget.onBookmarkTap,
-                          child: Icon(
-                            widget.message.isBookmarked
-                                ? Icons.bookmark_rounded
-                                : Icons.bookmark_border_rounded,
-                            size: 15,
-                            color: widget.message.isBookmarked
-                                ? AppConstants.primaryBlue
-                                : Colors.grey.shade500,
+                          child: Padding(
+                            padding: const EdgeInsets.all(2),
+                            child: Icon(
+                              widget.message.isBookmarked
+                                  ? Icons.bookmark_rounded
+                                  : Icons.bookmark_border_rounded,
+                              size: 16,
+                              color: widget.message.isBookmarked
+                                  ? AppConstants.primaryBlue
+                                  : AppConstants.textMuted,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         InkWell(
+                          borderRadius: BorderRadius.circular(4),
                           onTap: _isFeedbackPending
                               ? null
                               : () => _giveFeedback('helpful'),
-                          child: Icon(
-                            Icons.thumb_up_alt_outlined,
-                            size: 14,
-                            color: _feedbackGiven == 'helpful'
-                                ? const Color(0xFF10B981)
-                                : Colors.grey.shade500,
+                          child: Padding(
+                            padding: const EdgeInsets.all(2),
+                            child: Icon(
+                              Icons.thumb_up_alt_outlined,
+                              size: 15,
+                              color: _feedbackGiven == 'helpful'
+                                  ? AppConstants.successGreen
+                                  : AppConstants.textMuted,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         InkWell(
+                          borderRadius: BorderRadius.circular(4),
                           onTap: _isFeedbackPending
                               ? null
                               : () => _giveFeedback('not_helpful'),
-                          child: Icon(
-                            Icons.thumb_down_alt_outlined,
-                            size: 14,
-                            color: _feedbackGiven == 'not_helpful'
-                                ? Colors.red
-                                : Colors.grey.shade500,
+                          child: Padding(
+                            padding: const EdgeInsets.all(2),
+                            child: Icon(
+                              Icons.thumb_down_alt_outlined,
+                              size: 15,
+                              color: _feedbackGiven == 'not_helpful'
+                                  ? AppConstants.errorRed
+                                  : AppConstants.textMuted,
+                            ),
                           ),
                         ),
                       ],
@@ -314,9 +391,9 @@ class _ChatBubbleState extends State<ChatBubble> {
                     padding: const EdgeInsets.only(top: 2, right: 4),
                     child: Text(
                       timeStr,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 10,
-                        color: Colors.grey.shade400,
+                        color: AppConstants.textMuted,
                       ),
                     ),
                   ),

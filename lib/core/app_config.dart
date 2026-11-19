@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 class AppConfig {
   // Android Studio emulator -> localhost on the development computer.
   // For a physical phone, replace this with the computer's actual LAN IPv4.
-  static const androidApiBaseUrl = 'http://10.0.2.2:8000/api/v1';
+  static const androidApiBaseUrl = 'http://192.168.110.185:8000/api/v1';
   static const desktopApiBaseUrl = 'http://127.0.0.1:8000/api/v1';
 
   // When hosted, set this to your HTTPS API URL (including /api/v1).

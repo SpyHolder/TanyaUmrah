@@ -47,48 +47,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
   }
 
-  void _showVoiceInputDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Input Suara',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppConstants.primaryBlue.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.mic,
-                size: 48,
-                color: AppConstants.primaryBlue,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Input suara belum tersedia. Silakan ketik pertanyaan Anda pada kolom chat.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   void dispose() {
     _textController.dispose();
@@ -107,29 +65,33 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppConstants.surfaceLight,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'tanyaUMRAH Asisten AI',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold),
             ),
             Row(
               children: [
                 Container(
                   width: 7,
                   height: 7,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF10B981),
+                  decoration: BoxDecoration(
+                    color: chat.isStreaming
+                        ? AppConstants.accentGold
+                        : AppConstants.successGreen,
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 5),
-                const Text(
-                  'Asisten informasi berbasis dokumen',
-                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                Text(
+                  chat.isStreaming
+                      ? 'Sedang menuliskan jawaban...'
+                      : 'Asisten resmi berbasis dokumen',
+                  style: const TextStyle(fontSize: 10, color: AppConstants.textMuted),
                 ),
               ],
             ),
@@ -140,15 +102,42 @@ class _ChatScreenState extends State<ChatScreen> {
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Percakapan Baru',
             onPressed: () {
-              chat.clearChat();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Percakapan baru dimulai'),
-                  duration: Duration(seconds: 1),
+              if (chat.messages.isEmpty) return;
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Mulai Percakapan Baru?'),
+                  content: const Text(
+                    'Pesan saat ini akan dibersihkan dan sesi pertanyaan baru akan dimulai.',
+                    style: TextStyle(fontSize: 13, color: AppConstants.textSecondary),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Batal'),
+                    ),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppConstants.errorRed,
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        chat.clearChat();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Percakapan baru telah dimulai.'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      child: const Text('Mulai Baru'),
+                    ),
+                  ],
                 ),
               );
             },
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Column(
@@ -157,42 +146,80 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: chat.messages.isEmpty
                 ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 32,
+                      ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(
                               color: AppConstants.primaryBlue.withValues(alpha: 0.08),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
-                              Icons.auto_awesome,
-                              size: 36,
+                              Icons.auto_awesome_rounded,
+                              size: 40,
                               color: AppConstants.primaryBlue,
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 18),
                           const Text(
                             'Ada yang bisa saya bantu seputar aturan kampus?',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E293B),
+                              color: AppConstants.textDark,
                             ),
                           ),
                           const SizedBox(height: 6),
                           const Text(
-                            'Tanyakan informasi KRS, cuti kuliah, syarat magang, etika akademik, hingga SOP layanan BAPKK.',
+                            'Tanyakan informasi KRS, cuti kuliah, syarat magang, skripsi, hingga SOP layanan BAPKK UMRAH.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey,
-                              height: 1.4,
+                              fontSize: 11.5,
+                              color: AppConstants.textMuted,
+                              height: 1.45,
                             ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Quick Starter Questions
+                          const Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Pilihan Pertanyaan Cepat:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppConstants.textSecondary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _buildStarterChip(
+                            context,
+                            'Bagaimana syarat dan prosedur pengajuan cuti kuliah?',
+                            Icons.event_busy_rounded,
+                          ),
+                          _buildStarterChip(
+                            context,
+                            'Berapa batas SKS yang boleh diambil semester ini berdasarkan IPK?',
+                            Icons.fact_check_rounded,
+                          ),
+                          _buildStarterChip(
+                            context,
+                            'Apakah saya sudah memenuhi syarat untuk mengambil Kerja Praktek / Magang?',
+                            Icons.work_outline_rounded,
+                          ),
+                          _buildStarterChip(
+                            context,
+                            'Apa saja syarat pendaftaran seminar proposal dan sidang skripsi?',
+                            Icons.school_rounded,
                           ),
                         ],
                       ),
@@ -225,27 +252,20 @@ class _ChatScreenState extends State<ChatScreen> {
           // Bottom Input bar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.white,
-              border: Border(top: BorderSide(color: Colors.grey.shade200)),
+              border: Border(top: BorderSide(color: AppConstants.borderLight)),
             ),
             child: SafeArea(
               child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.mic_none_rounded,
-                      color: AppConstants.primaryBlue,
-                    ),
-                    tooltip: 'Input Suara',
-                    onPressed: _showVoiceInputDialog,
-                  ),
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: AppConstants.surfaceAlt,
                         borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: AppConstants.borderLight),
                       ),
                       child: TextField(
                         controller: _textController,
@@ -253,10 +273,13 @@ class _ChatScreenState extends State<ChatScreen> {
                           hintText: 'Ketik pertanyaan akademik...',
                           hintStyle: TextStyle(
                             fontSize: 13,
-                            color: Colors.grey,
+                            color: AppConstants.textMuted,
                           ),
                           border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
                           isDense: true,
+                          fillColor: Colors.transparent,
                         ),
                         minLines: 1,
                         maxLines: 4,
@@ -294,6 +317,42 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStarterChip(
+    BuildContext context,
+    String question,
+    IconData icon,
+  ) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          side: const BorderSide(color: AppConstants.borderLight),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        icon: Icon(icon, size: 16, color: AppConstants.primaryBlue),
+        label: Text(
+          question,
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppConstants.textDark,
+            fontWeight: FontWeight.normal,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        onPressed: () {
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          final chat = Provider.of<ChatProvider>(context, listen: false);
+          chat.sendMessage(query: question, student: auth.currentStudent);
+        },
       ),
     );
   }

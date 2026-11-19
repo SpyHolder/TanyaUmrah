@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/constants.dart';
 
 class SuggestionChips extends StatelessWidget {
   final List<String> suggestions;
@@ -20,15 +21,19 @@ class SuggestionChips extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: [
-              Icon(Icons.lightbulb_outline, size: 13, color: Colors.amber.shade800),
-              const SizedBox(width: 4),
+            children: const [
+              Icon(
+                Icons.lightbulb_outline_rounded,
+                size: 13.5,
+                color: AppConstants.warningAmber,
+              ),
+              SizedBox(width: 4),
               Text(
                 'Pertanyaan Terkait:',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: Colors.amber.shade900,
+                  color: AppConstants.textSecondary,
                 ),
               ),
             ],
@@ -39,13 +44,19 @@ class SuggestionChips extends StatelessWidget {
             runSpacing: 6,
             children: suggestions.map((q) => ActionChip(
               backgroundColor: Colors.white,
-              elevation: 0.5,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-              side: BorderSide(color: Colors.amber.shade200),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+              side: const BorderSide(color: AppConstants.borderLight),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               label: Text(
                 q,
-                style: const TextStyle(fontSize: 11, color: Color(0xFF334155), fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppConstants.textDark,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               onPressed: () => onSelect(q),
             )).toList(),
